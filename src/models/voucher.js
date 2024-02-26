@@ -10,12 +10,11 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-        Voucher.belongsToMany(models.Product, { through: 'ProductVoucher' });
+        Voucher.belongsToMany(models.Product, { through: 'ProductVoucher' });        
     }
-    
   }
   Voucher.init({
-    code: {
+    kode: {
         type: DataTypes.STRING,
         allowNull: false,
         unique: true
@@ -28,7 +27,7 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.TEXT,
         allowNull: true
       },
-      status: DataTypes.ENUM('active', 'inactive')
+     status: DataTypes.ENUM('active', 'inactive')
   }, {
     sequelize,
     modelName: 'Voucher',
