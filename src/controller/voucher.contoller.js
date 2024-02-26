@@ -17,48 +17,48 @@ const voucherController = {
 
   createVoucher: async (req, res) => {
     try {
-      await sequelize.transaction(
-        {
-          isolationLevel: Sequelize.Transaction.ISOLATION_LEVELS.SERIALIZABLE,
-        },
-        async (t) => {
-          const [voucherData, isCreated] = await Voucher.findOrCreate({
-            where: { code: req.body.code },
-            defaults: req.body,
-            fields: ['code', 'name', 'diskon'],
+      const { code, name, diskon, productId, status } = req.body;
+  
+   
+      if (status && !['active', 'inactive'].includes(status)) {
+        throw new ResponseError('Invalid status value', 400);
+      }
+  
+      await sequelize.transaction(async (t) => {
+        const [voucherData, isCreated] = await Voucher.findOrCreate({
+          where: { code },
+          defaults: { code, name, diskon, status }, 
+          transaction: t,
+        });
+  
+        if (!isCreated)
+          throw new ResponseError('Voucher code already exists', 400);
+  
+        if (productId && productId.length > 0) {
+          const productsData = await Product.findAll({
+            attributes: ['id'],
+            where: { id: productId },
             transaction: t,
           });
-          if (!isCreated)
-            throw new ResponseError('voucher code already exist', 400);
-
-          if (req.body?.productId && req.body.productId.length > 0) {
-            req.body.productId = [...new Set(req.body.productId)];
-
-            const productsData = await Product.findAll({
-              attributes: ['id'],
-              where: { id: req.body.productId },
-              transaction: t,
-            });
-            if (productsData?.length !== req.body.productId.length)
-              throw new ResponseError('invalid productId', 400);
-
-            await voucherData.setProducts(req.body.productId, {
-              transaction: t,
-            });
-          }
-
-          const result = await Voucher.findByPk(voucherData.code, {
-            include: [{ model: Product}],
-            transaction: t,
-          });
-
-          sendResponse({ res, statusCode: 201, data: result });
+  
+          if (productsData.length !== productId.length)
+            throw new ResponseError('Invalid productIds', 400);
+  
+          await voucherData.setProducts(productId, { transaction: t });
         }
-      );
+  
+        const result = await Voucher.findByPk(voucherData.code, {
+          include: [{ model: Product }],
+          transaction: t,
+        });
+  
+        sendResponse({ res, statusCode: 201, data: result });
+      });
     } catch (error) {
       sendResponse({ res, error });
     }
-  },
+  }
+  
 };
 
 module.exports = voucherController;
